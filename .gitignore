@@ -1,0 +1,29 @@
+﻿# ===== Build output =====
+target/
+backend/target/
+frontend/dist/
+
+# ===== Dependencies =====
+frontend/node_modules/
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+backend/.idea/
+backend/.vscode/
+*.iml
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Logs / Temp =====
+*.log
+boot_output.txt
+compile_output.txt
+*.tmp
+
+# ===== Env / Secrets =====
+.env
+.env.local
+*.pem
