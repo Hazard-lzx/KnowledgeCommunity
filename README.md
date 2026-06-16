@@ -2,6 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Spring%20Boot-3.0-6DB33F?style=flat&logo=springboot" alt="Spring Boot">
+  <img src="https://img.shields.io/badge/Spring%20AI-3.0-6DB33F?style=flat&logo=spring" alt="Spring AI">
   <img src="https://img.shields.io/badge/Java-17-ED8B00?style=flat&logo=openjdk" alt="Java">
   <img src="https://img.shields.io/badge/Vue%203-4FC08D?style=flat&logo=vuedotjs" alt="Vue 3">
   <img src="https://img.shields.io/badge/Element%20Plus-409EFF?style=flat&logo=element" alt="Element Plus">
@@ -9,6 +10,8 @@
   <img src="https://img.shields.io/badge/Redis-7.0-DC382D?style=flat&logo=redis" alt="Redis">
   <img src="https://img.shields.io/badge/Elasticsearch-8.0-005571?style=flat&logo=elasticsearch" alt="Elasticsearch">
   <img src="https://img.shields.io/badge/RocketMQ-5.x-D77310?style=flat&logo=apacherocketmq" alt="RocketMQ">
+  <img src="https://img.shields.io/badge/MyBatis--Plus-3.5-8B2252?style=flat&logo=mybatis" alt="MyBatis-Plus">
+  <img src="https://img.shields.io/badge/Alibaba%20OSS-FF6A00?style=flat&logo=alibabacloud" alt="Alibaba OSS">
 </p>
 
 ## 项目简介
