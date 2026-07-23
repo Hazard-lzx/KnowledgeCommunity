@@ -1,35 +1,10 @@
 package com.knowledgecommunity.modules.ai.agent.config;
 
-import com.knowledgecommunity.modules.ai.agent.tools.*;
-import com.knowledgecommunity.modules.article.service.ArticleService;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-
-import java.util.List;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * Agent 工具工厂：不注册任何 Bean，避免 Spring AI ToolCallbackResolver 自动扫描导致循环依赖
- * 由 AgentService 在构造时调用静态方法获取 ToolCallback 列表
+ * Agent 配置类：空壳，Spring AI 自动扫描 @Component 上的 @Tool 注解生成 ToolCallback Bean
  */
+@Configuration
 public class AgentConfig {
-
-    /**
-     * 创建 Agent 工具回调列表（非 Spring Bean，不参与自动扫描）
-     */
-    public static List<ToolCallback> createToolCallbacks(OpenAiChatModel chatModel,
-                                                          ArticleService articleService) {
-        MethodToolCallbackProvider toolProvider = MethodToolCallbackProvider.builder()
-                .toolObjects(
-                        new OutlineTool(chatModel),
-                        new ContinueTool(chatModel),
-                        new PolishTool(chatModel),
-                        new SummaryTool(chatModel),
-                        new TagRecommendTool(chatModel),
-                        new PublishTool(articleService)
-                )
-                .build();
-
-        return List.of(toolProvider.getToolCallbacks());
-    }
 }

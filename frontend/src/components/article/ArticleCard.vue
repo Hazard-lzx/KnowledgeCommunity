@@ -4,6 +4,21 @@
     <div class="card-cover" :style="coverStyle">
       <img v-if="article.coverUrl" :src="article.coverUrl" :alt="article.title" />
     </div>
+    <el-dropdown
+      v-if="isOwner"
+      trigger="click"
+      class="card-more"
+      @click.stop
+      @command="handleCommand"
+    >
+      <el-icon :size="16" class="more-icon"><MoreFilled /></el-icon>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <el-dropdown-item command="edit">编辑</el-dropdown-item>
+          <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
     <div class="card-body">
       <h3 class="card-title">{{ article.title }}</h3>
       <p class="card-summary" v-if="article.summary">{{ article.summary }}</p>
@@ -41,10 +56,14 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { MoreFilled } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import relativeTimePlugin from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import UserAvatar from '@/components/common/UserAvatar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { deleteArticle } from '@/api/article'
 
 dayjs.extend(relativeTimePlugin)
 dayjs.locale('zh-cn')
@@ -54,6 +73,9 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+const isOwner = computed(() => authStore.user?.userId === props.article.userId)
 
 const gradients = [
   'linear-gradient(135deg, #667eea, #764ba2)',
@@ -88,11 +110,60 @@ function goDetail() {
 function goProfile() {
   router.push(`/profile/${props.article.userId}`)
 }
+
+async function handleCommand(command) {
+  if (command === 'edit') {
+    router.push(`/publish/${props.article.id}`)
+  } else if (command === 'delete') {
+    try {
+      await ElMessageBox.confirm('确定要删除这篇文章吗？删除后不可恢复。', '删除文章', {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+    } catch {
+      return
+    }
+    try {
+      await deleteArticle(props.article.id)
+      ElMessage.success('文章已删除')
+      window.location.reload()
+    } catch {
+      // 错误已在拦截器中处理
+    }
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .article-card {
   cursor: pointer;
+  position: relative;
+}
+
+.card-more {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+
+  .more-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+}
+
+.article-card:hover .card-more .more-icon {
+  opacity: 1;
 }
 
 .card-cover {

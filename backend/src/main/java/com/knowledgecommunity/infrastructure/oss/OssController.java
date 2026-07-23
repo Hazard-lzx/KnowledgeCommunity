@@ -42,7 +42,12 @@ public class OssController {
         if (file.isEmpty()) {
             return Result.error("文件不能为空");
         }
-        String objectUrl = ossService.uploadFile(file);
-        return Result.success(Map.of("objectUrl", objectUrl));
+        try {
+            String objectUrl = ossService.uploadFile(file);
+            return Result.success(Map.of("objectUrl", objectUrl));
+        } catch (Exception e) {
+            log.error("OSS 上传失败", e);
+            return Result.error("文件上传失败: " + e.getMessage());
+        }
     }
 }

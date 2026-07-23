@@ -2,17 +2,19 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: dev
   datasource:
     url: jdbc:mysql://localhost:3306/knowledge_community?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:lzx060924}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   data:
     redis:
       host: 192.168.80.80
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:lzx060924}
       database: 5
       timeout: 3000ms
 
@@ -23,7 +25,7 @@ spring:
   elasticsearch:
     uris: http://192.168.80.80:9200
     username: elastic
-    password: ${ES_PASSWORD}
+    password: ${ES_PASSWORD:lzx060924}
 
   cache:
     type: caffeine
@@ -37,14 +39,17 @@ spring:
 
   ai:
     openai:
-      base-url: https://dashscope.aliyuncs.com/compatible-mode
       api-key: ${AI_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
       chat:
         options:
           model: deepseek-v3
           temperature: 0.7
       embedding:
-        enabled: false
+        options:
+          model: text-embedding-v2
+    model:
+      embedding: openai
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -73,16 +78,8 @@ oss:
   endpoint: oss-cn-shenzhen.aliyuncs.com
   access-key-id: ${OSS_ACCESS_KEY_ID}
   access-key-secret: ${OSS_ACCESS_KEY_SECRET}
-  bucket-name: blue-oss0924
-  url-prefix: https://blue-oss0924.oss-cn-shenzhen.aliyuncs.com/
-
-deepseek:
-  api-key: ${DEEPSEEK_API_KEY}
-  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  chat-model: deepseek-v3
-  embedding-base-url: https://api.siliconflow.cn/v1
-  embedding-api-key: ${SILICONFLOW_API_KEY}
-  embedding-model: BAAI/bge-large-zh-v1.5
+  bucket-name: blue-oss060924
+  url-prefix: https://blue-oss060924.oss-cn-shenzhen.aliyuncs.com/
 
 logging:
   level:

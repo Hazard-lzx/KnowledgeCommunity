@@ -50,7 +50,7 @@ public class ArticleService {
         article.setContent(request.getContent());
         article.setCoverUrl(request.getCoverUrl());
         article.setStatus(request.getStatus() != null ? request.getStatus() : 1);
-        article.setTags(request.getTags());
+        article.setTags(request.getTags() != null ? String.join(",", request.getTags()) : null);
         article.setLikeCount(0);
         article.setCollectCount(0);
         article.setViewCount(0);
@@ -133,7 +133,7 @@ public class ArticleService {
         article.setTitle(request.getTitle());
         article.setContent(request.getContent());
         article.setCoverUrl(request.getCoverUrl());
-        article.setTags(request.getTags());
+        article.setTags(request.getTags() != null ? String.join(",", request.getTags()) : null);
         if (request.getStatus() != null) {
             article.setStatus(request.getStatus());
         }

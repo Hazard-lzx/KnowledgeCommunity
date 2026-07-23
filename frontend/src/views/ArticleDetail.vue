@@ -42,6 +42,14 @@
             >
               {{ isFollowed ? '已关注' : '关注' }}
             </el-button>
+            <div v-if="isOwner" class="owner-actions">
+              <el-button type="primary" round size="small" @click="$router.push(`/publish/${article.id}`)">
+                编辑
+              </el-button>
+              <el-button type="danger" round size="small" @click="handleDelete">
+                删除
+              </el-button>
+            </div>
           </div>
 
           <div class="detail-tags" v-if="article.tags?.length">
@@ -92,10 +100,11 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { getArticle } from '@/api/article'
+import { deleteArticle } from '@/api/article'
 import { likeArticle, unlikeArticle, collectArticle, uncollectArticle } from '@/api/interaction'
 import { followUser, unfollowUser } from '@/api/user'
 import { useAuthStore } from '@/stores/auth'
@@ -103,6 +112,7 @@ import UserAvatar from '@/components/common/UserAvatar.vue'
 import ArticleQaPanel from '@/components/ai/ArticleQaPanel.vue'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const article = ref(null)
 const isFollowed = ref(false)
@@ -163,6 +173,25 @@ async function toggleFollow() {
     await followUser(article.value.userId)
   }
   isFollowed.value = !isFollowed.value
+}
+
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm('确定要删除这篇文章吗？删除后不可恢复。', '删除文章', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteArticle(article.value.id)
+    ElMessage.success('文章已删除')
+    router.push('/')
+  } catch {
+    // 错误已在拦截器中处理
+  }
 }
 </script>
 
@@ -339,6 +368,11 @@ async function toggleFollow() {
 .publish-time {
   font-size: 12px;
   color: $text-muted;
+}
+
+.owner-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .detail-tags {

@@ -1,47 +1,66 @@
 package com.knowledgecommunity.modules.ai.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * AI 写作助手服务
+ * 支持续写（continue）、润色（polish）、大纲（outline）三种模式
+ * 通过 ChatClient 流式输出，以 SSE 事件格式推送前端
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WritingAssistantService {
 
-    private final ObjectMapper objectMapper;
+    private final ChatClient.Builder chatClientBuilder;
 
-    @Value("${deepseek.api-key}")
-    private String apiKey;
-
-    @Value("${deepseek.base-url}")
-    private String baseUrl;
-
-    @Value("${deepseek.chat-model}")
-    private String chatModel;
-
-    public void handleWritingAssist(String type, String content, String context, PrintWriter writer) {
+    /**
+     * 写作助手入口
+     * @param type    写作类型：continue / polish / outline
+     * @param content 用户输入内容
+     * @param context 文章其他部分作为背景参考
+     * @param writer  SSE 输出流
+     */
+    public void assist(String type, String content, String context, PrintWriter writer) {
         try {
             String systemPrompt = buildSystemPrompt(type, context);
             String userPrompt = buildUserPrompt(type, content);
-            doStreamChat(systemPrompt, userPrompt, writer);
+
+            AtomicBoolean hasContent = new AtomicBoolean(false);
+
+            chatClientBuilder.build()
+                    .prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .stream()
+                    .content()
+                    .doOnNext(token -> {
+                        hasContent.set(true);
+                        sendSse(writer, "chunk", token);
+                    })
+                    .doOnComplete(() -> {
+                        if (!hasContent.get()) {
+                            sendSse(writer, "chunk", "暂无内容返回");
+                        }
+                        sendSse(writer, "done", "[DONE]");
+                    })
+                    .onErrorResume(e -> {
+                        log.error("AI写作助手流式异常, type={}", type, e);
+                        sendSse(writer, "error", e.getMessage());
+                        return Mono.empty();
+                    })
+                    .blockLast();
         } catch (Exception e) {
-            log.error("AI\u5199\u4f5c\u52a9\u624b\u5f02\u5e38, type={}", type, e);
-            sendSse(writer, "[ERROR] " + e.getMessage());
+            log.error("AI写作助手异常, type={}", type, e);
+            sendSse(writer, "error", e.getMessage());
         }
         writer.flush();
     }
@@ -50,20 +69,20 @@ public class WritingAssistantService {
         String base;
         switch (type) {
             case "continue":
-                base = "\u4f60\u662f\u4e00\u4e2a\u4e13\u4e1a\u7684\u5185\u5bb9\u521b\u4f5c\u8005\u3002\u8bf7\u6839\u636e\u7528\u6237\u63d0\u4f9b\u7684\u4e0a\u6587\uff0c\u81ea\u7136\u6d41\u7545\u5730\u7eed\u5199100-200\u5b57\uff0c\u4fdd\u6301\u98ce\u683c\u4e00\u81f4\u3002\u76f4\u63a5\u8f93\u51fa\u7eed\u5199\u5185\u5bb9\uff0c\u4e0d\u8981\u52a0\u4efb\u4f55\u524d\u7f00\u6216\u89e3\u91ca\u3002";
+                base = "你是一个专业的内容创作者。请根据用户提供的上文，自然流畅地续写100-200字，保持风格一致。直接输出续写内容，不要加任何前缀或解释。";
                 break;
             case "polish":
-                base = "\u4f60\u662f\u4e00\u4e2a\u4e13\u4e1a\u7684\u6587\u5b57\u7f16\u8f91\u3002\u8bf7\u4f18\u5316\u4ee5\u4e0b\u6587\u672c\u7684\u8868\u8fbe\uff0c\u4fee\u6b63\u8bed\u75c5\uff0c\u4f7f\u5176\u66f4\u6d41\u7545\u3001\u4e13\u4e1a\uff0c\u4f46\u4fdd\u6301\u539f\u610f\u4e0d\u53d8\u3002\u76f4\u63a5\u8f93\u51fa\u4f18\u5316\u540e\u7684\u6587\u672c\uff0c\u4e0d\u8981\u52a0\u4efb\u4f55\u524d\u7f00\u6216\u89e3\u91ca\u3002";
+                base = "你是一个专业的文字编辑。请优化以下文本的表达，修正语病，使其更流畅、专业，但保持原意不变。直接输出优化后的文本，不要加任何前缀或解释。";
                 break;
             case "outline":
-                base = "\u4f60\u662f\u4e00\u4e2a\u7ed3\u6784\u5316\u7684\u5199\u4f5c\u52a9\u624b\u3002\u8bf7\u6839\u636e\u7528\u6237\u63d0\u4f9b\u7684\u6807\u9898\uff0c\u751f\u6210\u4e00\u4efd\u8be6\u7ec6\u7684\u6587\u7ae0\u5927\u7eb2\uff0c\u5305\u542b\u81f3\u5c113\u4e2a\u4e8c\u7ea7\u6807\u9898\uff0c\u6bcf\u4e2a\u4e8c\u7ea7\u6807\u9898\u4e0b\u5305\u542b2-3\u4e2a\u8981\u70b9\u3002\u4f7f\u7528Markdown\u5217\u8868\u683c\u5f0f\u8f93\u51fa\u3002";
+                base = "你是一个结构化的写作助手。请根据用户提供的标题，生成一份详细的文章大纲，包含至少3个二级标题，每个二级标题下包含2-3个要点。使用Markdown列表格式输出。";
                 break;
             default:
-                base = "\u4f60\u662f\u4e00\u4e2a\u5199\u4f5c\u52a9\u624b\u3002";
+                base = "你是一个写作助手。";
         }
 
         if (StringUtils.isNotBlank(context)) {
-            base += "\n\n\u4ee5\u4e0b\u662f\u6587\u7ae0\u7684\u5176\u4ed6\u90e8\u5206\u4f5c\u4e3a\u80cc\u666f\u53c2\u8003\uff1a\n" + context;
+            base += "\n\n以下是文章的其他部分作为背景参考：\n" + context;
         }
 
         return base;
@@ -72,87 +91,22 @@ public class WritingAssistantService {
     private String buildUserPrompt(String type, String content) {
         switch (type) {
             case "continue":
-                return "\u4e0a\u6587\uff1a\n" + content + "\n\n\u8bf7\u7eed\u5199\uff1a";
+                return "上文：\n" + content + "\n\n请续写：";
             case "polish":
-                return "\u539f\u6587\uff1a\n" + content + "\n\n\u4f18\u5316\u540e\uff1a";
+                return "原文：\n" + content + "\n\n优化后：";
             case "outline":
-                return "\u6807\u9898\uff1a" + content + "\n\n\u5927\u7eb2\uff1a";
+                return "标题：" + content + "\n\n大纲：";
             default:
                 return content;
         }
     }
 
-    private void doStreamChat(String systemPrompt, String userPrompt, PrintWriter writer) throws Exception {
-        String url = baseUrl + "/chat/completions";
-        Map<String, Object> body = new HashMap<>();
-        body.put("model", chatModel);
-        body.put("stream", true);
-        body.put("messages", List.of(
-                Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userPrompt)
-        ));
-
-        String requestBody = objectMapper.writeValueAsString(body);
-        log.info("\u8c03\u7528AI\u5199\u4f5c\u52a9\u624bAPI: url={}", url);
-
-        HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setConnectTimeout(30000);
-        conn.setReadTimeout(120000);
-        conn.setDoOutput(true);
-        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
-
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200) {
-            String errorBody = "";
-            try {
-                BufferedReader errReader = new BufferedReader(
-                        new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8));
-                StringBuilder sb = new StringBuilder();
-                String l;
-                while ((l = errReader.readLine()) != null) sb.append(l);
-                errorBody = sb.toString();
-            } catch (Exception ignored) {}
-            throw new RuntimeException("API HTTP " + responseCode + ": " + errorBody);
-        }
-
-        boolean hasContent = false;
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.startsWith("data:")) continue;
-                String data = line.substring(5).trim();
-                if (data.isEmpty() || "[DONE]".equals(data)) continue;
-                try {
-                    JsonNode node = objectMapper.readTree(data);
-                    JsonNode choices = node.get("choices");
-                    if (choices == null || choices.size() == 0) continue;
-                    JsonNode delta = choices.get(0).get("delta");
-                    if (delta == null) continue;
-                    JsonNode contentNode = delta.get("content");
-                    if (contentNode == null || contentNode.isNull()) continue;
-                    String token = contentNode.asText();
-                    if (token.isEmpty()) continue;
-                    hasContent = true;
-                    sendSse(writer, token);
-                } catch (Exception e) {
-                    log.warn("\u89e3\u6790SSE\u6570\u636e\u5931\u8d25: {}", data);
-                }
-            }
-        }
-
-        if (!hasContent) {
-            sendSse(writer, "\u6682\u65e0\u5185\u5bb9\u8fd4\u56de");
-        }
-
-        sendSse(writer, "[DONE]");
-        writer.flush();
-    }
-
-    private void sendSse(PrintWriter writer, String data) {
+    /**
+     * 发送 SSE 事件
+     * 格式：event: <type>\ndata: <content>\n\n
+     */
+    private void sendSse(PrintWriter writer, String event, String data) {
+        writer.write("event: " + event + "\n");
         writer.write("data: " + data + "\n\n");
         writer.flush();
     }

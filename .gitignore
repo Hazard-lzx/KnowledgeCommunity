@@ -27,3 +27,5 @@ compile_output.txt
 .env
 .env.local
 *.pem
+backend/src/main/resources/application-dev.yml
+backend/src/main/resources/application-prod.yml

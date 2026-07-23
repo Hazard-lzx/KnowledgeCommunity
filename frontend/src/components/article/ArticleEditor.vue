@@ -47,7 +47,7 @@
         <div class="editor-actions">
           <el-button round @click="saveDraft">存草稿</el-button>
           <el-button type="primary" round @click="publish" :loading="publishing">
-            {{ isEdit ? '更新' : '发布' }}
+            发布
           </el-button>
         </div>
       </div>
@@ -218,7 +218,7 @@ async function doSave(status) {
   const data = {
     title: title.value,
     content: content.value,
-    tags: tags.value,
+    tags: tags.value ? tags.value.split(',').map(t => t.trim()).filter(Boolean) : [],
     coverUrl: coverUrl.value,
     status,
   }

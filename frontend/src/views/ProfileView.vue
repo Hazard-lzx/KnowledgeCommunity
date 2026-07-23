@@ -24,11 +24,10 @@
         <el-tabs v-model="activeTab">
           <el-tab-pane label="已发布" name="published">
             <div class="waterfall waterfall-5" v-if="publishedArticles.length">
-              <ArticleCard
-                v-for="article in publishedArticles"
-                :key="article.id"
-                :article="article"
-              />
+              <div class="card-wrapper" v-for="article in publishedArticles" :key="article.id">
+                <ArticleCard :article="article" />
+                <el-icon class="delete-icon" :size="18" @click.stop="handleDelete(article.id)"><Delete /></el-icon>
+              </div>
             </div>
             <div v-else class="empty-tip">暂无已发布文章</div>
           </el-tab-pane>
@@ -76,6 +75,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import UserAvatar from '@/components/common/UserAvatar.vue'
 import UserStats from '@/components/user/UserStats.vue'
@@ -247,6 +247,38 @@ async function handleDelete(id) {
       font-size: 11px;
       gap: 6px;
     }
+  }
+}
+
+.card-wrapper {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 14px;
+
+  .delete-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(245, 108, 108, 0.85);
+    color: #fff;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 5;
+
+    &:hover {
+      background: #f56c6c;
+    }
+  }
+
+  &:hover .delete-icon {
+    opacity: 1;
   }
 }
 

@@ -27,7 +27,7 @@ public class WritingAssistantController {
 
         try {
             PrintWriter writer = response.getWriter();
-            writingAssistantService.handleWritingAssist(
+            writingAssistantService.assist(
                     request.getType(), request.getContent(), request.getContext(), writer);
             writer.flush();
         } catch (Exception e) {
