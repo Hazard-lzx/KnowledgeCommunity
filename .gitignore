@@ -1,7 +1,6 @@
 ﻿# ===== Build output =====
 target/
 backend/target/
-backend/META-INF/
 frontend/dist/
 
 # ===== Dependencies =====
