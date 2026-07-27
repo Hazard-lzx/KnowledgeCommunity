@@ -1,6 +1,7 @@
 package com.knowledgecommunity.modules.user.controller;
 
 import com.knowledgecommunity.common.Result;
+import com.knowledgecommunity.modules.user.dto.FollowUserItem;
 import com.knowledgecommunity.modules.user.dto.UserProfileResponse;
 import com.knowledgecommunity.modules.user.dto.UpdateProfileRequest;
 import com.knowledgecommunity.modules.user.service.UserFollowService;
@@ -11,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 用户控制器：获取/更新用户信息、关注/取关
@@ -52,5 +55,19 @@ public class UserController {
                                  @PathVariable Long followeeId) {
         userFollowService.unfollow(currentUser, followeeId);
         return Result.success();
+    }
+
+    /** 获取关注列表（userId 关注了哪些人） */
+    @GetMapping("/{id}/following")
+    public Result<List<FollowUserItem>> getFollowingList(@PathVariable Long id,
+                                                         @Nullable @AuthenticationPrincipal UserPrincipal currentUser) {
+        return Result.success(userFollowService.getFollowingList(id, currentUser));
+    }
+
+    /** 获取粉丝列表（谁关注了 userId） */
+    @GetMapping("/{id}/followers")
+    public Result<List<FollowUserItem>> getFollowerList(@PathVariable Long id,
+                                                        @Nullable @AuthenticationPrincipal UserPrincipal currentUser) {
+        return Result.success(userFollowService.getFollowerList(id, currentUser));
     }
 }

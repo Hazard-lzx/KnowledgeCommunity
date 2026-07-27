@@ -1,28 +1,33 @@
 <template>
   <div class="user-stats">
-    <div class="stat-item" v-for="stat in stats" :key="stat.label">
-      <span class="stat-value">{{ stat.value }}</span>
-      <span class="stat-label">{{ stat.label }}</span>
+    <div class="stat-item" @click="$emit('showFollowing')">
+      <span class="stat-value">{{ following }}</span>
+      <span class="stat-label">关注</span>
+    </div>
+    <div class="stat-item" @click="$emit('showFollowers')">
+      <span class="stat-value">{{ followers }}</span>
+      <span class="stat-label">粉丝</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">{{ articles }}</span>
+      <span class="stat-label">发帖</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">{{ likes }}</span>
+      <span class="stat-label">获赞</span>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
-const props = defineProps({
+defineProps({
   following: { type: Number, default: 0 },
   followers: { type: Number, default: 0 },
   articles: { type: Number, default: 0 },
   likes: { type: Number, default: 0 },
 })
 
-const stats = computed(() => [
-  { label: '关注', value: props.following },
-  { label: '粉丝', value: props.followers },
-  { label: '发帖', value: props.articles },
-  { label: '获赞', value: props.likes },
-])
+defineEmits(['showFollowing', 'showFollowers'])
 </script>
 
 <style lang="scss" scoped>

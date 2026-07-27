@@ -19,11 +19,15 @@ public class FeedController {
 
     private final FeedService feedService;
 
-    /** 获取 Feed 流（游标分页，匿名用户也可访问） */
+    /**
+     * 获取 Feed 流（游标分页，匿名用户也可访问）
+     * @param mode 模式：all=全站最新，following=仅关注用户（需登录）
+     */
     @GetMapping
     public Result<FeedResponse> getFeed(@Nullable @AuthenticationPrincipal UserPrincipal currentUser,
                                         @RequestParam(required = false) String cursor,
-                                        @RequestParam(defaultValue = "10") int size) {
-        return Result.success(feedService.getFeed(currentUser, cursor, size));
+                                        @RequestParam(defaultValue = "10") int size,
+                                        @RequestParam(defaultValue = "all") String mode) {
+        return Result.success(feedService.getFeed(currentUser, cursor, size, mode));
     }
 }

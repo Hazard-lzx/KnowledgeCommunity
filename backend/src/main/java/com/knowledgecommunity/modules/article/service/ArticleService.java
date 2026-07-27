@@ -10,6 +10,7 @@ import com.knowledgecommunity.modules.article.mapper.ArticleMapper;
 import com.knowledgecommunity.modules.auth.mapper.UserMapper;
 import com.knowledgecommunity.modules.auth.entity.User;
 import com.knowledgecommunity.modules.feed.dto.FeedItem;
+import com.knowledgecommunity.modules.user.mapper.UserFollowMapper;
 import com.knowledgecommunity.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class ArticleService {
     private final UserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
+    private final UserFollowMapper userFollowMapper;
 
     /**
      * 创建文章
@@ -107,9 +109,19 @@ public class ArticleService {
         if (currentUser != null) {
             response.setLiked(isBitSet("article:like:bitmap:" + id, currentUser.getUserId()));
             response.setCollected(isBitSet("article:collect:bitmap:" + id, currentUser.getUserId()));
+
+            // 检查当前用户是否已关注作者
+            boolean followed = userFollowMapper.exists(
+                    new LambdaQueryWrapper<com.knowledgecommunity.modules.user.entity.UserFollow>()
+                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getFollowerId, currentUser.getUserId())
+                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getFolloweeId, article.getUserId())
+                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getStatus, 1)
+            );
+            response.setFollowed(followed);
         } else {
             response.setLiked(false);
             response.setCollected(false);
+            response.setFollowed(false);
         }
 
         // 增加浏览量（Redis 计数，定时任务同步回 DB）

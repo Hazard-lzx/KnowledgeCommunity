@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,12 +60,12 @@ public class FeedService {
     /**
      * 获取 Feed 流
      * 缓存查询顺序：L1 Caffeine → L2 Redis 页面 → 单飞锁 + DB
-     * 未登录用户：展示全站最新文章
-     * 已登录用户：展示关注用户的文章
+     * mode=all：展示全站最新文章
+     * mode=following：仅展示关注用户的文章（需登录）
      */
-    public FeedResponse getFeed(UserPrincipal currentUser, String cursor, int size) {
+    public FeedResponse getFeed(UserPrincipal currentUser, String cursor, int size, String mode) {
         Long userId = currentUser != null ? currentUser.getUserId() : 0L;
-        String cacheKey = "feed:" + userId + ":" + (cursor != null ? cursor : "latest");
+        String cacheKey = "feed:" + userId + ":" + mode + ":" + (cursor != null ? cursor : "latest");
 
         // L1 Caffeine 缓存
         Cache l1Cache = cacheManager.getCache("feed");
@@ -113,7 +114,7 @@ public class FeedService {
             }
 
             // 查询数据库
-            FeedResponse response = queryFeedFromDB(currentUser, cursor, size);
+            FeedResponse response = queryFeedFromDB(currentUser, cursor, size, mode);
 
             // 写入 L1 + L2 缓存
             try {
@@ -135,14 +136,18 @@ public class FeedService {
 
     /**
      * 从数据库查询 Feed 数据
-     * 未登录用户：查询全站最新文章
-     * 已登录用户：查询关注用户的已发布文章（游标分页）
+     * mode=all：查询全站最新文章（忽略关注关系）
+     * mode=following：查询关注用户的已发布文章（游标分页），未登录则返回空
      */
-    private FeedResponse queryFeedFromDB(UserPrincipal currentUser, String cursor, int size) {
+    private FeedResponse queryFeedFromDB(UserPrincipal currentUser, String cursor, int size, String mode) {
         List<Long> followeeIds = null;
 
-        if (currentUser != null) {
-            // 已登录：获取关注列表
+        if ("following".equals(mode)) {
+            // 关注模式：必须登录
+            if (currentUser == null) {
+                return new FeedResponse(Collections.emptyList(), null, false);
+            }
+
             List<UserFollow> follows = userFollowMapper.selectList(
                     new LambdaQueryWrapper<UserFollow>()
                             .eq(UserFollow::getFollowerId, currentUser.getUserId())
@@ -154,14 +159,12 @@ public class FeedService {
                     .map(UserFollow::getFolloweeId)
                     .collect(Collectors.toList());
 
-            // 关注列表为空时，展示全站最新文章（包含自己的）
+            // 关注列表为空时返回空列表
             if (followeeIds.isEmpty()) {
-                followeeIds = null;
-            } else {
-                // 确保自己的文章也包含在 Feed 中
-                followeeIds.add(currentUser.getUserId());
+                return new FeedResponse(Collections.emptyList(), null, false);
             }
         }
+        // mode=all：不添加用户过滤，展示全站文章
 
         // 查询文章（游标分页，多取一条判断是否有下一页）
         LambdaQueryWrapper<Article> query = new LambdaQueryWrapper<Article>()

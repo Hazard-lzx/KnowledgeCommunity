@@ -1,8 +1,11 @@
-<!-- 首页 Feed 流：瀑布流 + 无限滚动 -->
+<!-- 首页/关注 Feed 流：瀑布流 + 无限滚动 -->
 <template>
   <div class="feed-view">
     <div class="feed-header">
-      <h1 class="feed-title">It's never too old to learn.</h1>
+      <h1 class="feed-title">{{ isFollowing ? '你的关注' : 'It\'s never too old to learn.' }}</h1>
+      <p class="feed-subtitle" v-if="isFollowing && feedStore.items.length === 0 && !feedStore.loading">
+        关注一些创作者，这里将展示他们的最新文章
+      </p>
     </div>
 
     <!-- 骨架屏 -->
@@ -28,13 +31,17 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ArticleCard from '@/components/article/ArticleCard.vue'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
 import { useFeedStore } from '@/stores/feed'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
+const route = useRoute()
 const feedStore = useFeedStore()
+
+const isFollowing = computed(() => route.meta.mode === 'following')
 
 const { sentinel } = useInfiniteScroll(
   () => feedStore.fetchNext(),
@@ -42,9 +49,19 @@ const { sentinel } = useInfiniteScroll(
 )
 
 onMounted(() => {
-  feedStore.reset()
+  const mode = route.meta.mode || 'all'
+  feedStore.reset(mode)
   feedStore.fetchNext()
 })
+
+// 路由切换时重新加载
+watch(
+  () => route.meta.mode,
+  (newMode) => {
+    feedStore.reset(newMode || 'all')
+    feedStore.fetchNext()
+  }
+)
 </script>
 
 <style lang="scss" scoped>

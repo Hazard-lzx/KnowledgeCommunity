@@ -29,6 +29,12 @@ const routes = [
         component: () => import('@/views/FeedView.vue'),
       },
       {
+        path: 'following',
+        name: 'Following',
+        component: () => import('@/views/FeedView.vue'),
+        meta: { mode: 'following', requiresAuth: true },
+      },
+      {
         path: 'search',
         name: 'Search',
         component: () => import('@/views/SearchView.vue'),

@@ -39,4 +39,7 @@ public class ArticleDetailResponse {
 
     /** 当前用户是否已收藏 */
     private Boolean collected;
+
+    /** 当前用户是否已关注作者 */
+    private Boolean followed;
 }

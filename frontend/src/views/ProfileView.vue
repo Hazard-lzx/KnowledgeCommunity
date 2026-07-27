@@ -16,6 +16,8 @@
           :followers="profile.followerCount || 0"
           :articles="profile.articleCount || 0"
           :likes="profile.likeCount || 0"
+          @showFollowing="showFollowList('following')"
+          @showFollowers="showFollowList('followers')"
         />
       </div>
 
@@ -68,6 +70,28 @@
           <el-button type="primary" @click="saveProfile">保存</el-button>
         </template>
       </el-dialog>
+
+      <!-- 关注/粉丝列表弹窗 -->
+      <el-dialog v-model="showFollowDialog" :title="followDialogTitle" width="420px">
+        <div class="follow-list" v-if="followList.length">
+          <div class="follow-item" v-for="user in followList" :key="user.id">
+            <div class="follow-item-left" @click="goToProfile(user.id)">
+              <UserAvatar :avatar-url="user.avatarUrl" :username="user.username" :size="40" />
+              <span class="follow-username">{{ user.username }}</span>
+            </div>
+            <el-button
+              v-if="!isCurrentUser(user.id)"
+              :type="user.followed ? 'default' : 'primary'"
+              size="small"
+              round
+              @click="toggleFollowInList(user)"
+            >
+              {{ user.followed ? '已关注' : '关注' }}
+            </el-button>
+          </div>
+        </div>
+        <div v-else class="empty-tip">暂无数据</div>
+      </el-dialog>
     </div>
 </template>
 
@@ -81,7 +105,7 @@ import UserAvatar from '@/components/common/UserAvatar.vue'
 import UserStats from '@/components/user/UserStats.vue'
 import ArticleCard from '@/components/article/ArticleCard.vue'
 import { useAuthStore } from '@/stores/auth'
-import { getUserProfile, updateProfile } from '@/api/user'
+import { getUserProfile, updateProfile, getFollowingList, getFollowerList, followUser, unfollowUser } from '@/api/user'
 import { uploadFile } from '@/api/ai'
 import { deleteArticle, getUserArticles } from '@/api/article'
 
@@ -95,6 +119,12 @@ const publishedArticles = ref([])
 const draftArticles = ref([])
 const showEditDialog = ref(false)
 const editForm = reactive({ username: '', signature: '', avatarUrl: '' })
+
+// 关注/粉丝列表
+const showFollowDialog = ref(false)
+const followDialogTitle = ref('')
+const followList = ref([])
+const followListType = ref('') // 'following' | 'followers'
 
 const isMe = computed(() => route.params.id === 'me')
 
@@ -167,6 +197,59 @@ async function handleDelete(id) {
   } catch {
     // 用户取消
   }
+}
+
+// 获取目标用户ID
+function getTargetUserId() {
+  return isMe.value ? profile.value?.id : route.params.id
+}
+
+function isCurrentUser(userId) {
+  return authStore.user?.userId === userId
+}
+
+async function showFollowList(type) {
+  const userId = getTargetUserId()
+  if (!userId) return
+
+  followListType.value = type
+  followDialogTitle.value = type === 'following' ? '关注列表' : '粉丝列表'
+  try {
+    const api = type === 'following' ? getFollowingList : getFollowerList
+    const res = await api(userId)
+    followList.value = res.data || []
+  } catch {
+    followList.value = []
+  }
+  showFollowDialog.value = true
+}
+
+async function toggleFollowInList(user) {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  try {
+    if (user.followed) {
+      await unfollowUser(user.id)
+    } else {
+      await followUser(user.id)
+    }
+    user.followed = !user.followed
+    // 刷新资料页的关注/粉丝计数
+    const userId = getTargetUserId()
+    if (userId) {
+      const res = await getUserProfile(userId)
+      profile.value = res.data
+    }
+  } catch {
+    ElMessage.error('操作失败')
+  }
+}
+
+function goToProfile(userId) {
+  showFollowDialog.value = false
+  router.push(`/profile/${userId}`)
 }
 </script>
 
@@ -319,6 +402,43 @@ async function handleDelete(id) {
   display: flex;
   gap: 8px;
   margin-left: 16px;
+}
+
+/* 关注/粉丝列表弹窗 */
+.follow-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.follow-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+}
+
+.follow-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+
+  &:hover .follow-username {
+    color: $primary;
+  }
+}
+
+.follow-username {
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+  transition: $transition;
 }
 
 @media (max-width: 1100px) {

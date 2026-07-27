@@ -124,6 +124,7 @@ const isOwner = computed(() => article.value?.userId === authStore.user?.userId)
 onMounted(async () => {
   const res = await getArticle(route.params.id)
   article.value = res.data
+  isFollowed.value = res.data.followed ?? false
 })
 
 function formatTime(time) {

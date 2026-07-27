@@ -7,16 +7,17 @@
     </div>
 
     <nav class="nav-menu">
-      <router-link
-        v-for="item in navItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item"
-        :class="{ active: isActive(item.path) }"
-      >
-        <el-icon :size="20"><component :is="item.icon" /></el-icon>
-        <span class="nav-label">{{ item.label }}</span>
-      </router-link>
+      <template v-for="item in navItems" :key="item.path">
+        <router-link
+          v-if="!item.needAuth || authStore.isLoggedIn"
+          :to="item.path"
+          class="nav-item"
+          :class="{ active: isActive(item.path) }"
+        >
+          <el-icon :size="20"><component :is="item.icon" /></el-icon>
+          <span class="nav-label">{{ item.label }}</span>
+        </router-link>
+      </template>
     </nav>
 
     <div class="nav-footer">
@@ -63,6 +64,7 @@ const authStore = useAuthStore()
 
 const navItems = [
   { path: '/', label: '首页', icon: 'HomeFilled' },
+  { path: '/following', label: '关注', icon: 'Star', needAuth: true },
   { path: '/search', label: '搜索', icon: 'Search' },
   { path: '/publish', label: '创作', icon: 'EditPen' },
   { path: '/agent', label: 'AI 创作', icon: 'MagicStick' },
