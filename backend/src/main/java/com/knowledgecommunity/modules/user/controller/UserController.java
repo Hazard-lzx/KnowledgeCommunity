@@ -57,14 +57,14 @@ public class UserController {
         return Result.success();
     }
 
-    /** 获取关注列表（userId 关注了哪些人） */
+    /** 获取关注列表*/
     @GetMapping("/{id}/following")
     public Result<List<FollowUserItem>> getFollowingList(@PathVariable Long id,
                                                          @Nullable @AuthenticationPrincipal UserPrincipal currentUser) {
         return Result.success(userFollowService.getFollowingList(id, currentUser));
     }
 
-    /** 获取粉丝列表（谁关注了 userId） */
+    /** 获取粉丝列表*/
     @GetMapping("/{id}/followers")
     public Result<List<FollowUserItem>> getFollowerList(@PathVariable Long id,
                                                         @Nullable @AuthenticationPrincipal UserPrincipal currentUser) {

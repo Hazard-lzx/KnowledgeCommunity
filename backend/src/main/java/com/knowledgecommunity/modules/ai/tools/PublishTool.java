@@ -1,4 +1,4 @@
-package com.knowledgecommunity.modules.ai.agent.tools;
+package com.knowledgecommunity.modules.ai.tools;
 
 import com.knowledgecommunity.modules.article.dto.ArticleCreateRequest;
 import com.knowledgecommunity.modules.article.service.ArticleService;

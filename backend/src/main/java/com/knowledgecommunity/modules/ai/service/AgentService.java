@@ -1,7 +1,6 @@
-package com.knowledgecommunity.modules.ai.agent.service;
+package com.knowledgecommunity.modules.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.knowledgecommunity.modules.ai.agent.memory.AgentMemoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -17,7 +16,6 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Service;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -82,10 +80,14 @@ public class AgentService {
             }
             UserMessage userMessage = new UserMessage(userMsg.toString());
 
-            // 3. 初始化对话历史
-            List<Message> conversationHistory = new ArrayList<>();
-            conversationHistory.add(systemMessage);
-            conversationHistory.add(userMessage);
+            // 3. 初始化对话历史（从 Redis 加载，支持会话恢复）
+            List<Message> conversationHistory = agentMemoryService.getMessages(sessionId);
+            if (conversationHistory.isEmpty()) {
+                conversationHistory.add(systemMessage);
+                conversationHistory.add(userMessage);
+                agentMemoryService.appendMessage(sessionId, systemMessage);
+                agentMemoryService.appendMessage(sessionId, userMessage);
+            }
 
             // 4. 构建 ToolCallingChatOptions，设置 toolCallbacks 并禁用内部自动执行
             ToolCallingChatOptions options = ToolCallingChatOptions.builder()
@@ -108,6 +110,7 @@ public class AgentService {
                     log.warn("ChatResponse 为空，终止循环, sessionId={}", sessionId);
                     sendSse(writer, "final_chunk", "模型未返回有效响应，请重试。");
                     sendSse(writer, "done", "");
+                    agentMemoryService.clearSession(sessionId);
                     return;
                 }
 
@@ -116,11 +119,13 @@ public class AgentService {
                     log.warn("AssistantMessage 为空，终止循环, sessionId={}", sessionId);
                     sendSse(writer, "final_chunk", "模型未返回有效响应，请重试。");
                     sendSse(writer, "done", "");
+                    agentMemoryService.clearSession(sessionId);
                     return;
                 }
 
-                // 将 assistant 消息追加到历史
+                // 将 assistant 消息追加到历史并持久化
                 conversationHistory.add(assistantMessage);
+                agentMemoryService.appendMessage(sessionId, assistantMessage);
 
                 // b. 检查是否有工具调用
                 boolean hasToolCalls = assistantMessage.hasToolCalls();
@@ -137,10 +142,11 @@ public class AgentService {
                     // 执行工具调用
                     ToolExecutionResult toolResult = toolCallingManager.executeToolCalls(prompt, chatResponse);
 
-                    // 将工具响应消息追加到历史
+                    // 将工具响应消息追加到历史并持久化
                     List<Message> toolResponseMessages = toolResult.conversationHistory();
                     for (Message toolMsg : toolResponseMessages) {
                         conversationHistory.add(toolMsg);
+                        agentMemoryService.appendMessage(sessionId, toolMsg);
                         String text = toolMsg.getText();
                         if (text != null && !text.isBlank()) {
                             sendSse(writer, "tool_result", text);
@@ -167,6 +173,7 @@ public class AgentService {
 
                     sendSse(writer, "final_chunk", finalContent);
                     sendSse(writer, "done", "");
+                    agentMemoryService.clearSession(sessionId);
                     return;
                 }
             }
@@ -175,11 +182,13 @@ public class AgentService {
             log.warn("Agent 达到最大迭代次数 MAX_ITERATIONS={}, sessionId={}", MAX_ITERATIONS, sessionId);
             sendSse(writer, "final_chunk", "已达到最大迭代次数，创作终止。");
             sendSse(writer, "done", "");
+            agentMemoryService.clearSession(sessionId);
 
         } catch (Exception e) {
             log.error("Agent执行异常, sessionId={}", sessionId, e);
             sendSse(writer, "error", "执行异常：" + e.getMessage());
             sendSse(writer, "done", "");
+            agentMemoryService.clearSession(sessionId);
         }
     }
 

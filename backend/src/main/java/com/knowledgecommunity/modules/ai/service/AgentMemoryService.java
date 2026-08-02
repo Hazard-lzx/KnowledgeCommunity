@@ -1,4 +1,4 @@
-package com.knowledgecommunity.modules.ai.agent.memory;
+package com.knowledgecommunity.modules.ai.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

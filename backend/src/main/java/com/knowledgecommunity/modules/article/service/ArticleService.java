@@ -10,6 +10,7 @@ import com.knowledgecommunity.modules.article.mapper.ArticleMapper;
 import com.knowledgecommunity.modules.auth.mapper.UserMapper;
 import com.knowledgecommunity.modules.auth.entity.User;
 import com.knowledgecommunity.modules.feed.dto.FeedItem;
+import com.knowledgecommunity.modules.user.entity.UserFollow;
 import com.knowledgecommunity.modules.user.mapper.UserFollowMapper;
 import com.knowledgecommunity.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -112,10 +113,10 @@ public class ArticleService {
 
             // 检查当前用户是否已关注作者
             boolean followed = userFollowMapper.exists(
-                    new LambdaQueryWrapper<com.knowledgecommunity.modules.user.entity.UserFollow>()
-                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getFollowerId, currentUser.getUserId())
-                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getFolloweeId, article.getUserId())
-                            .eq(com.knowledgecommunity.modules.user.entity.UserFollow::getStatus, 1)
+                    new LambdaQueryWrapper<UserFollow>()
+                            .eq(UserFollow::getFollowerId, currentUser.getUserId())
+                            .eq(UserFollow::getFolloweeId, article.getUserId())
+                            .eq(UserFollow::getStatus, 1)
             );
             response.setFollowed(followed);
         } else {

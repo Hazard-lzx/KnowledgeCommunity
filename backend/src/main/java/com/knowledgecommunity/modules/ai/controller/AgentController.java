@@ -1,7 +1,7 @@
-package com.knowledgecommunity.modules.ai.agent.controller;
+package com.knowledgecommunity.modules.ai.controller;
 
-import com.knowledgecommunity.modules.ai.agent.dto.AgentCreateRequest;
-import com.knowledgecommunity.modules.ai.agent.service.AgentService;
+import com.knowledgecommunity.modules.ai.dto.AgentCreateRequest;
+import com.knowledgecommunity.modules.ai.service.AgentService;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,4 +1,4 @@
-package com.knowledgecommunity.modules.ai.agent.dto;
+package com.knowledgecommunity.modules.ai.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

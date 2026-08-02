@@ -1,4 +1,4 @@
-package com.knowledgecommunity.modules.ai.agent.tools;
+package com.knowledgecommunity.modules.ai.tools;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
