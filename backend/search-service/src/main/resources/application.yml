@@ -1,0 +1,48 @@
+server:
+  port: 8103
+
+spring:
+  application:
+    name: search-service
+  profiles:
+    active: dev
+  data:
+    redis:
+      host: 192.168.80.80
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 1
+      timeout: 3000ms
+
+    elasticsearch:
+      repositories:
+        enabled: false
+
+  elasticsearch:
+    uris: http://192.168.80.80:9200
+    username: elastic
+    password: ${ES_PASSWORD:}
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:192.168.80.80:8848}
+
+internal:
+  token: ${INTERNAL_TOKEN:}
+
+# Feign 熔断降级（Sentinel）+ 内部调用快失败超时
+feign:
+  sentinel:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-}]"
+  level:
+    com.knowledgecommunity: debug

@@ -23,10 +23,11 @@ Thumbs.db
 boot_output.txt
 compile_output.txt
 *.tmp
+.uploads/
 
 # ===== Env / Secrets =====
 .env
 .env.local
 *.pem
-backend/src/main/resources/application-dev.yml
-backend/src/main/resources/application-prod.yml
+backend/*/src/main/resources/application-dev.yml
+backend/*/src/main/resources/application-prod.yml

@@ -1,0 +1,70 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: article-service
+  profiles:
+    active: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/knowledge_community?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: 192.168.80.80
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 1
+      timeout: 3000ms
+
+    elasticsearch:
+      repositories:
+        enabled: false
+
+  elasticsearch:
+    uris: http://192.168.80.80:9200
+    username: elastic
+    password: ${ES_PASSWORD:}
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:192.168.80.80:8848}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+internal:
+  python-base-url: ${AI_SERVICE_URI:http://localhost:8000}
+  token: ${INTERNAL_TOKEN:}
+
+rocketmq:
+  name-server: 192.168.80.80:9876
+  producer:
+    group: article-producer
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+
+# Feign 熔断降级（Sentinel）+ 内部调用快失败超时
+feign:
+  sentinel:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-}]"
+  level:
+    com.knowledgecommunity: debug

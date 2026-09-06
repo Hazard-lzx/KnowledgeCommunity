@@ -1,0 +1,75 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: gateway
+  profiles:
+    active: dev
+  data:
+    redis:
+      host: 192.168.80.80
+      port: 6379
+      password: ${REDIS_PASSWORD:lzx060924}
+      database: 1
+      timeout: 3000ms
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:192.168.80.80:8848}
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 60s
+      routes:
+        # AI 三件套直连 Python ai-service（不注册 Nacos，固定 URI）
+        # 回滚方式：把本路由 uri 改回 http://localhost:8080 即切回单体旧 AI 模块
+        # 流式响应时间长：RAG 问答 5 分钟、Agent 10 分钟上限，response-timeout（毫秒）必须大于 Agent 上限
+        - id: ai-service
+          uri: ${AI_SERVICE_URI:http://localhost:8000}
+          predicates:
+            - Path=/api/ai/**,/api/qa/**
+          metadata:
+            response-timeout: 660000
+          filters:
+            # 全局令牌桶限流（Redis）：每用户 5 QPS，突发 10
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
+        # 以下均为 lb:// 服务发现路由（第 3 步：单体退役，按业务拆分）
+        # 回滚方式：删除以下四条路由，恢复 monolith-default（http://localhost:8080）并把 monolith 加回构建
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**,/api/users/**,/api/oss/**
+          metadata:
+            response-timeout: 60000
+        - id: article-service
+          uri: lb://article-service
+          predicates:
+            - Path=/api/articles/**
+          metadata:
+            response-timeout: 60000
+        - id: search-service
+          uri: lb://search-service
+          predicates:
+            - Path=/api/search/**
+          metadata:
+            response-timeout: 60000
+        - id: feed-service
+          uri: lb://feed-service
+          predicates:
+            - Path=/api/feed/**
+          metadata:
+            response-timeout: 60000
+        # /api/internal/** 不路由：AuthGlobalFilter 直接 404，内部接口只允许服务间内网直连
+
+jwt:
+  secret: ${JWT_SECRET:}
+
+logging:
+  level:
+    com.knowledgecommunity.gateway: debug
